@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canvas Animation to GIF</title>
+  <style>
+    body {
+      background-color: transparent;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    canvas {
+      width: 240px;
+      height: 240px;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="myCanvas" width="100" height="100"></canvas>
+
+  <script src="./scripts/gif.js"></script>
+
+  <script>
+    const canvas = document.getElementById('myCanvas');
+    const context = canvas.getContext('2d');
+    const image = new Image();
+    image.src = './loading.png';
+
+    const gif = new GIF({
+      workers: 2,
+      quality: 1,
+      workerScript: './scripts/gif.worker.js',
+      width: canvas.width,
+      height: canvas.height,
+      transparent: '#FFFFFF',
+      debug: true,
+    });
+
+    let angle = 0;
+    const frames = 60;
+    const delay = 1000 / frames;
+
+    function drawFrame() {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.save();
+
+      context.translate(canvas.width / 2, canvas.height / 2);
+      context.rotate((angle * Math.PI * -1) / 180);
+      
+      const scale = Math.max(canvas.width / image.width, canvas.height / image.height);
+      const scaledWidth = image.width * scale;
+      const scaledHeight = image.height * scale;
+
+      context.drawImage(image, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
+      context.restore();
+    }
+
+    function animate(index) {
+      drawFrame();
+      gif.addFrame(canvas, { delay, copy: true, dispose: 1 });
+
+      angle += 360 / frames;
+
+      if (index < frames) {
+        requestAnimationFrame(() => animate(index + 1));
+      } else {
+        gif.render();
+      }
+    }
+
+    gif.on('finished', (blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'loading.gif';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+
+    image.onload = () => {
+      animate(0);
+    };
+  </script>
+</body>
+
+</html>
